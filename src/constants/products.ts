@@ -1,0 +1,127 @@
+import { Product, Order } from '../types';
+
+export const PRODUCTS: Product[] = [
+  {
+    id: '1',
+    name: 'Tênis de Corrida Pro Elite',
+    brand: 'Nike',
+    category: 'Corrida',
+    price: 349,
+    emoji: '👟',
+    rating: 4.8,
+    reviewCount: 312,
+    description: 'Tênis desenvolvido para corredores de alta performance. Tecnologia de amortecimento avançada para máximo conforto durante longas distâncias.',
+    sizes: [38, 39, 40, 41, 42],
+  },
+  {
+    id: '2',
+    name: 'Bola Campo Oficial',
+    brand: 'Adidas',
+    category: 'Futebol',
+    price: 189,
+    emoji: '⚽',
+    rating: 4.6,
+    reviewCount: 245,
+    description: 'Bola oficial de campo com costura reforçada e revestimento de alta durabilidade. Ideal para jogos e treinos profissionais.',
+    sizes: [5],
+  },
+  {
+    id: '3',
+    name: 'Luvas CrossFit',
+    brand: 'Under Armour',
+    category: 'Academia',
+    price: 89,
+    emoji: '🥊',
+    rating: 4.5,
+    reviewCount: 178,
+    description: 'Luvas de CrossFit com proteção extra para as palmas. Material respirável e ajuste ergonômico para treinos intensos.',
+    sizes: [38, 39, 40, 41, 42, 43],
+  },
+  {
+    id: '4',
+    name: 'Capacete Ciclismo',
+    brand: 'Specialized',
+    category: 'Ciclismo',
+    price: 249,
+    emoji: '🚴',
+    rating: 4.7,
+    reviewCount: 134,
+    description: 'Capacete aerodinâmico com ventilação superior. Certificação CE EN1078 para máxima segurança.',
+    sizes: [54, 56, 58, 60],
+  },
+  {
+    id: '5',
+    name: 'Camiseta Dry-Fit',
+    brand: 'Nike',
+    category: 'Corrida',
+    price: 129,
+    emoji: '👕',
+    rating: 4.4,
+    reviewCount: 289,
+    description: 'Camiseta com tecnologia Dry-Fit que mantém o corpo fresco e seco durante atividades físicas intensas.',
+    sizes: [38, 39, 40, 41, 42, 43, 44],
+  },
+  {
+    id: '6',
+    name: 'Chuteira Society Pro',
+    brand: 'Puma',
+    category: 'Futebol',
+    price: 299,
+    emoji: '⚽',
+    rating: 4.6,
+    reviewCount: 198,
+    description: 'Chuteira society com travas multidirecionais para melhor aderência em campos sintéticos.',
+    sizes: [38, 39, 40, 41, 42],
+  },
+];
+
+export const MOCK_ORDERS: Order[] = [
+  {
+    id: 'IMS-00312',
+    date: '15 Mar 2026 · 3 itens',
+    status: 'Entregue',
+    items: [
+      { emoji: '👟', name: 'Tênis' },
+      { emoji: '⚽', name: 'Bola' },
+      { emoji: '🥊', name: 'Luvas' },
+    ],
+    total: 716,
+    itemCount: 3,
+  },
+  {
+    id: 'IMS-00325',
+    date: '28 Mai 2026 · 2 itens',
+    status: 'A caminho',
+    items: [
+      { emoji: '🚴', name: 'Capacete' },
+      { emoji: '👕', name: 'Camiseta' },
+    ],
+    total: 318,
+    itemCount: 2,
+  },
+  {
+    id: 'IMS-00331',
+    date: '05 Jun 2026 · 1 item',
+    status: 'Processando',
+    items: [
+      { emoji: '👟', name: 'Tênis' },
+    ],
+    total: 349,
+    itemCount: 1,
+  },
+];
+
+export const DELIVERY_ADDRESSES = [
+  {
+    label: 'Casa - Carlos Mendes',
+    recipient: 'Carlos Mendes',
+    street: 'Rua das Palmeiras, 142, Apto 7',
+    city: 'Moema · São Paulo, SP · 04067-001',
+  },
+  {
+    label: 'Trabalho',
+    recipient: 'Carlos Mendes',
+    street: 'Av. Paulista, 1000, Sala 301',
+    city: 'Bela Vista · São Paulo, SP · 01310-100',
+  },
+];
