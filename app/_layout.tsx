@@ -15,7 +15,22 @@ export default function RootLayout() {
     <CartProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen
+          name="login"
+          options={{
+            headerShown: false,
+            animation: 'fade',
+          }}
+        />
+        <Stack.Screen
+          name="cadastro"
+          options={{
+            headerShown: false,
+            animation: 'slide_from_right',
+          }}
+        />
         <Stack.Screen
           name="produto/[id]"
           options={{
