@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,19 +8,38 @@ import {
   FlatList,
   TouchableOpacity,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/src/constants/colors';
-import { PRODUCTS } from '@/src/constants/products';
 import { ProductCard } from '@/src/components/ProductCard';
+import { Product } from '@/src/types';
+import { fetchProducts } from '@/src/services/api';
 
 export default function BuscarScreen() {
   const [query, setQuery] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const prods = await fetchProducts();
+        setProducts(prods);
+      } catch (e) {
+        console.error('Erro ao buscar produtos:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
 
   const results = query.length > 1
-    ? PRODUCTS.filter((p) =>
+    ? products.filter((p) =>
         p.name.toLowerCase().includes(query.toLowerCase()) ||
-        p.brand.toLowerCase().includes(query.toLowerCase())
+        p.categorySlug.toLowerCase().includes(query.toLowerCase()) ||
+        p.description.toLowerCase().includes(query.toLowerCase())
       )
     : [];
 
@@ -34,7 +53,7 @@ export default function BuscarScreen() {
         <Ionicons name="search-outline" size={18} color={Colors.textMuted} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar produtos, marcas..."
+          placeholder="Buscar produtos, categorias..."
           placeholderTextColor={Colors.textMuted}
           value={query}
           onChangeText={setQuery}
@@ -47,12 +66,17 @@ export default function BuscarScreen() {
         )}
       </View>
 
-      {query.length <= 1 ? (
+      {loading ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.emptySubtitle}>Carregando produtos...</Text>
+        </View>
+      ) : query.length <= 1 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyEmoji}>🔍</Text>
           <Text style={styles.emptyTitle}>Encontre o que precisa</Text>
           <Text style={styles.emptySubtitle}>
-            Digite o nome do produto ou marca para começar
+            Digite o nome do produto ou categoria para começar
           </Text>
         </View>
       ) : results.length === 0 ? (
@@ -66,7 +90,7 @@ export default function BuscarScreen() {
       ) : (
         <FlatList
           data={results}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.sku}
           numColumns={2}
           contentContainerStyle={styles.list}
           columnWrapperStyle={styles.row}

@@ -9,16 +9,43 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/src/constants/colors';
+import { useAuth } from '@/src/context/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [showSenha, setShowSenha] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email.trim() || !senha.trim()) {
+      Alert.alert('Atenção', 'Preencha e-mail e senha.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await login(email.trim(), senha);
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      let msg = 'Não foi possível fazer login. Verifique seus dados.';
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed.detail) msg = parsed.detail;
+      } catch {}
+      Alert.alert('Erro no Login', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -66,6 +93,7 @@ export default function LoginScreen() {
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -87,6 +115,7 @@ export default function LoginScreen() {
                   value={senha}
                   onChangeText={setSenha}
                   secureTextEntry={!showSenha}
+                  editable={!loading}
                 />
                 <TouchableOpacity onPress={() => setShowSenha(!showSenha)} style={styles.eyeBtn}>
                   <Ionicons
@@ -105,12 +134,19 @@ export default function LoginScreen() {
 
             {/* Botão Entrar */}
             <TouchableOpacity
-              style={styles.btnPrimary}
-              onPress={() => router.replace('/(tabs)')}
+              style={[styles.btnPrimary, loading && styles.btnDisabled]}
+              onPress={handleLogin}
               activeOpacity={0.85}
+              disabled={loading}
             >
-              <Text style={styles.btnPrimaryText}>Entrar</Text>
-              <Ionicons name="arrow-forward" size={18} color="#fff" />
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.btnPrimaryText}>Entrar</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#fff" />
+                </>
+              )}
             </TouchableOpacity>
 
             {/* Divider */}
@@ -256,6 +292,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 6,
+  },
+  btnDisabled: {
+    opacity: 0.7,
   },
   btnPrimaryText: {
     fontSize: 16,

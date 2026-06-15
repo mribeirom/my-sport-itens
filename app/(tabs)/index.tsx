@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,28 +6,49 @@ import {
   TextInput,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/src/constants/colors';
-import { PRODUCTS } from '@/src/constants/products';
 import { ProductCard } from '@/src/components/ProductCard';
 import { CategoryFilter } from '@/src/components/CategoryFilter';
 import { AppHeader } from '@/src/components/AppHeader';
-import { Category } from '@/src/types';
-
-const CATEGORIES: Category[] = ['Todos', 'Corrida', 'Futebol', 'Academia', 'Ciclismo'];
+import { Product, Category } from '@/src/types';
+import { fetchProducts, fetchCategories } from '@/src/services/api';
 
 export default function HomeScreen() {
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<Category>('Todos');
+  const [selectedCategory, setSelectedCategory] = useState('todos');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        const [prods, cats] = await Promise.all([
+          fetchProducts(),
+          fetchCategories(),
+        ]);
+        setProducts(prods);
+        setCategories(cats);
+      } catch (e) {
+        console.error('Erro ao carregar dados:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
   const filtered = useMemo(() => {
-    return PRODUCTS.filter((p) => {
-      const matchCat = selectedCategory === 'Todos' || p.category === selectedCategory;
+    return products.filter((p) => {
+      const matchCat = selectedCategory === 'todos' || p.categorySlug === selectedCategory;
       const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
       return matchCat && matchSearch;
     });
-  }, [search, selectedCategory]);
+  }, [search, selectedCategory, products]);
 
   const pairs = useMemo(() => {
     const result = [];
@@ -67,8 +88,8 @@ export default function HomeScreen() {
         {/* Categories */}
         <View style={styles.categoriesWrapper}>
           <CategoryFilter
-            categories={CATEGORIES}
-            selected={selectedCategory}
+            categories={categories}
+            selectedSlug={selectedCategory}
             onSelect={setSelectedCategory}
           />
         </View>
@@ -76,25 +97,35 @@ export default function HomeScreen() {
         {/* Products */}
         <View style={styles.productsSection}>
           <Text style={styles.sectionTitle}>Produtos</Text>
-          {pairs.map((pair, idx) => (
-            <View key={idx} style={styles.row}>
-              <View style={styles.col}>
-                <ProductCard product={pair[0]} />
-              </View>
-              {pair[1] ? (
-                <View style={styles.col}>
-                  <ProductCard product={pair[1]} />
+
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={styles.loadingText}>Carregando produtos...</Text>
+            </View>
+          ) : (
+            <>
+              {pairs.map((pair, idx) => (
+                <View key={idx} style={styles.row}>
+                  <View style={styles.col}>
+                    <ProductCard product={pair[0]} />
+                  </View>
+                  {pair[1] ? (
+                    <View style={styles.col}>
+                      <ProductCard product={pair[1]} />
+                    </View>
+                  ) : (
+                    <View style={styles.col} />
+                  )}
                 </View>
-              ) : (
-                <View style={styles.col} />
+              ))}
+              {filtered.length === 0 && (
+                <View style={styles.empty}>
+                  <Text style={styles.emptyEmoji}>🔍</Text>
+                  <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
+                </View>
               )}
-            </View>
-          ))}
-          {filtered.length === 0 && (
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
-            </View>
+            </>
           )}
         </View>
       </ScrollView>
@@ -165,5 +196,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.textSecondary,
   },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
 });
-

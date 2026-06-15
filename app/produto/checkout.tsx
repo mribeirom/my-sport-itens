@@ -8,13 +8,16 @@ import {
   SafeAreaView,
   Alert,
   Platform,
+  ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/src/constants/colors';
 import { useCart } from '@/src/context/CartContext';
-import { DELIVERY_ADDRESSES } from '@/src/constants/products';
+import { useAuth } from '@/src/context/AuthContext';
 import { DeliveryMethod, PaymentMethod } from '@/src/types';
+import { createOrder } from '@/src/services/api';
 
 const DELIVERY_OPTIONS = [
   {
@@ -54,28 +57,111 @@ const PAYMENT_OPTIONS = [
   },
 ];
 
+function generateOrderCode(): string {
+  const num = Math.floor(Math.random() * 99999).toString().padStart(5, '0');
+  return `IMS-${num}`;
+}
+
+function generatePaymentCode(): string {
+  return `PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+}
+
 export default function CheckoutScreen() {
   const router = useRouter();
   const { items, totalItems, totalPrice, clearCart } = useCart();
+  const { user } = useAuth();
 
-  const [selectedAddress, setSelectedAddress] = useState(0);
+  const [cep, setCep] = useState('');
+  const [address, setAddress] = useState<{ street: string; city: string; uf: string; } | null>(null);
+  const [fetchingCep, setFetchingCep] = useState(false);
+
   const [delivery, setDelivery] = useState<DeliveryMethod>('express');
   const [payment, setPayment] = useState<PaymentMethod>('credit');
+  const [loading, setLoading] = useState(false);
 
-  const handleConfirm = () => {
-    Alert.alert(
-      '🎉 Pedido Confirmado!',
-      `Seu pedido #IMS-00313 foi realizado com sucesso.\n\nTotal: R$ ${totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-      [
-        {
-          text: 'Ver Pedidos',
-          onPress: () => {
-            clearCart();
-            router.push('/perfil');
+  const handleCepChange = async (text: string) => {
+    const rawCep = text.replace(/\D/g, '');
+    setCep(rawCep);
+    if (rawCep.length === 8) {
+      setFetchingCep(true);
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`);
+        const data = await response.json();
+        if (data.erro) {
+          Alert.alert('CEP não encontrado', 'Verifique o CEP digitado.');
+          setAddress(null);
+        } else {
+          setAddress({
+            street: data.logradouro,
+            city: data.localidade,
+            uf: data.uf,
+          });
+        }
+      } catch (e) {
+        Alert.alert('Erro', 'Não foi possível buscar o endereço.');
+      } finally {
+        setFetchingCep(false);
+      }
+    } else {
+      setAddress(null);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!user?.code) {
+      Alert.alert('Erro', 'Você precisa estar logado para finalizar o pedido.');
+      return;
+    }
+    if (!address) {
+      Alert.alert('Erro', 'Por favor, informe um CEP válido para a entrega.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const orderCode = generateOrderCode();
+      const paymentCode = generatePaymentCode();
+
+      await createOrder({
+        code: orderCode,
+        userCode: user.code,
+        items: items.map((item) => ({
+          productSku: item.product.sku,
+          name: item.product.name,
+          imageUrl: item.product.imageUrl || '',
+          unitPrice: item.product.price,
+          quantity: item.quantity,
+          total: item.product.price * item.quantity,
+        })),
+        totalAmount: totalPrice,
+        status: 'paid',
+        paymentCode,
+      });
+
+      clearCart();
+
+      Alert.alert(
+        '🎉 Pedido Confirmado!',
+        `Seu pedido #${orderCode} foi realizado com sucesso.\n\nTotal: R$ ${totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        [
+          {
+            text: 'Ver Pedidos',
+            onPress: () => {
+              router.push('/perfil');
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } catch (error: any) {
+      let msg = 'Não foi possível criar o pedido. Tente novamente.';
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed.detail) msg = parsed.detail;
+      } catch {}
+      Alert.alert('Erro no Pedido', msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -95,32 +181,35 @@ export default function CheckoutScreen() {
       >
         {/* Delivery Address */}
         <Text style={styles.sectionLabel}>Endereço de entrega</Text>
-        {DELIVERY_ADDRESSES.map((addr, idx) => (
-          <TouchableOpacity
-            key={idx}
-            style={[styles.optionCard, selectedAddress === idx && styles.optionCardActive]}
-            onPress={() => setSelectedAddress(idx)}
-            activeOpacity={0.8}
-          >
+        <View style={styles.inputContainer}>
+          <Ionicons name="location-outline" size={20} color={Colors.textSecondary} style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Digite o CEP (somente números)"
+            placeholderTextColor={Colors.textSecondary}
+            keyboardType="number-pad"
+            maxLength={8}
+            value={cep}
+            onChangeText={handleCepChange}
+          />
+          {fetchingCep && <ActivityIndicator size="small" color={Colors.primary} style={{ marginLeft: 8 }} />}
+        </View>
+
+        {address && (
+          <View style={[styles.optionCard, styles.optionCardActive, { marginTop: 12 }]}>
+            <View style={styles.optionIcon}>
+              <Text style={styles.optionIconText}>🏠</Text>
+            </View>
             <View style={styles.optionContent}>
-              <Text style={styles.optionLabel}>{addr.label}</Text>
-              <Text style={styles.optionDetail}>{addr.street}</Text>
-              <Text style={styles.optionDetail}>{addr.city}</Text>
+              <Text style={styles.optionLabel}>Endereço Selecionado</Text>
+              <Text style={styles.optionDetail}>{address.street}</Text>
+              <Text style={styles.optionDetail}>{address.city} - {address.uf}</Text>
             </View>
-            <View
-              style={[
-                styles.radio,
-                selectedAddress === idx && styles.radioActive,
-              ]}
-            >
-              {selectedAddress === idx && <View style={styles.radioDot} />}
+            <View style={[styles.radio, styles.radioActive]}>
+              <View style={styles.radioDot} />
             </View>
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity style={styles.addAddressBtn}>
-          <Ionicons name="add-circle-outline" size={16} color={Colors.primary} />
-          <Text style={styles.addAddressText}>Adicionar novo endereço</Text>
-        </TouchableOpacity>
+          </View>
+        )}
 
         {/* Delivery Method */}
         <Text style={styles.sectionLabel}>Método de entrega</Text>
@@ -180,11 +269,16 @@ export default function CheckoutScreen() {
           </Text>
         </View>
         <TouchableOpacity
-          style={styles.confirmBtn}
+          style={[styles.confirmBtn, loading && styles.confirmBtnDisabled]}
           onPress={handleConfirm}
           activeOpacity={0.85}
+          disabled={loading}
         >
-          <Text style={styles.confirmBtnText}>Confirmar Pedido</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.confirmBtnText}>Confirmar Pedido</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -226,6 +320,24 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    height: 52,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text,
   },
   sectionLabel: {
     fontSize: 14,
@@ -348,6 +460,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 6,
+  },
+  confirmBtnDisabled: {
+    opacity: 0.7,
   },
   confirmBtnText: {
     fontSize: 16,

@@ -1,30 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
+  Image,
   StyleSheet,
   SafeAreaView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Colors from '@/src/constants/colors';
-import { PRODUCTS } from '@/src/constants/products';
 import { useCart } from '@/src/context/CartContext';
+import { Product } from '@/src/types';
+import { fetchProducts } from '@/src/services/api';
 
 export default function ProdutoDetalheScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { addItem, totalItems } = useCart();
 
-  const product = PRODUCTS.find((p) => p.id === id);
-
-  const [selectedSize, setSelectedSize] = useState(
-    product?.sizes[Math.floor((product.sizes.length - 1) / 2)] ?? 0
-  );
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    async function loadProduct() {
+      try {
+        const products = await fetchProducts();
+        const found = products.find((p) => p.sku === id);
+        setProduct(found || null);
+      } catch (e) {
+        console.error('Erro ao carregar produto:', e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProduct();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.notFound}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.notFoundText}>Carregando...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!product) {
     return (
@@ -41,12 +67,10 @@ export default function ProdutoDetalheScreen() {
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
-      addItem(product, selectedSize);
+      addItem(product);
     }
     router.push('/carrinho');
   };
-
-  const stars = Array.from({ length: 5 }, (_, i) => i < Math.floor(product.rating));
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -59,7 +83,7 @@ export default function ProdutoDetalheScreen() {
           style={styles.navBtn}
           onPress={() => router.push('/carrinho')}
         >
-          <Ionicons name="heart-outline" size={20} color={Colors.text} />
+          <Ionicons name="cart-outline" size={20} color={Colors.text} />
           {totalItems > 0 && (
             <View style={styles.navBadge}>
               <Text style={styles.navBadgeText}>{totalItems}</Text>
@@ -74,63 +98,37 @@ export default function ProdutoDetalheScreen() {
       >
         {/* Hero */}
         <View style={styles.heroContainer}>
-          <Text style={styles.heroEmoji}>{product.emoji}</Text>
+          {product.imageUrl ? (
+            <Image
+              source={{ uri: product.imageUrl }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={styles.heroEmoji}>📦</Text>
+          )}
         </View>
 
         {/* Info */}
         <View style={styles.infoSection}>
           <Text style={styles.categoryBrand}>
-            {product.category} · {product.brand}
+            {product.categorySlug}
           </Text>
           <Text style={styles.productName}>{product.name}</Text>
 
-          {/* Rating */}
-          <View style={styles.ratingRow}>
-            <View style={styles.stars}>
-              {stars.map((filled, i) => (
-                <Ionicons
-                  key={i}
-                  name={filled ? 'star' : 'star-outline'}
-                  size={14}
-                  color={Colors.star}
-                />
-              ))}
+          {/* Stock */}
+          {product.stock > 0 && (
+            <View style={styles.stockRow}>
+              <View style={styles.stockDot} />
+              <Text style={styles.stockText}>
+                {product.stock} em estoque
+              </Text>
             </View>
-            <Text style={styles.ratingValue}>{product.rating}</Text>
-            <Text style={styles.ratingCount}>({product.reviewCount} avaliações)</Text>
-          </View>
+          )}
 
           <Text style={styles.price}>
             R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </Text>
-
-          {/* Size selector */}
-          {product.sizes.length > 1 && (
-            <View style={styles.sizeSection}>
-              <Text style={styles.sizeLabel}>Tamanho</Text>
-              <View style={styles.sizes}>
-                {product.sizes.map((size) => (
-                  <TouchableOpacity
-                    key={size}
-                    style={[
-                      styles.sizeBtn,
-                      selectedSize === size && styles.sizeBtnActive,
-                    ]}
-                    onPress={() => setSelectedSize(size)}
-                  >
-                    <Text
-                      style={[
-                        styles.sizeBtnText,
-                        selectedSize === size && styles.sizeBtnTextActive,
-                      ]}
-                    >
-                      {size}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
 
           {/* Description */}
           <View style={styles.descSection}>
@@ -142,28 +140,36 @@ export default function ProdutoDetalheScreen() {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <View style={styles.quantityControl}>
-          <TouchableOpacity
-            style={styles.qtyBtn}
-            onPress={() => setQuantity(Math.max(1, quantity - 1))}
-          >
-            <Text style={styles.qtyBtnText}>−</Text>
-          </TouchableOpacity>
-          <Text style={styles.qtyValue}>{quantity}</Text>
-          <TouchableOpacity
-            style={styles.qtyBtn}
-            onPress={() => setQuantity(quantity + 1)}
-          >
-            <Text style={styles.qtyBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={handleAddToCart}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.addBtnText}>Adicionar ao Carrinho</Text>
-        </TouchableOpacity>
+        {product.stock > 0 ? (
+          <>
+            <View style={styles.quantityControl}>
+              <TouchableOpacity
+                style={styles.qtyBtn}
+                onPress={() => setQuantity(Math.max(1, quantity - 1))}
+              >
+                <Text style={styles.qtyBtnText}>−</Text>
+              </TouchableOpacity>
+              <Text style={styles.qtyValue}>{quantity}</Text>
+              <TouchableOpacity
+                style={styles.qtyBtn}
+                onPress={() => setQuantity(Math.min(product.stock, quantity + 1))}
+              >
+                <Text style={styles.qtyBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={handleAddToCart}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.addBtnText}>Adicionar ao Carrinho</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={[styles.addBtn, styles.addBtnDisabled]}>
+            <Text style={styles.addBtnText}>Esgotado</Text>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -214,7 +220,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   heroContainer: {
-    height: 220,
+    height: 260,
     backgroundColor: Colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -226,6 +232,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 10,
     elevation: 3,
+    overflow: 'hidden',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 24,
   },
   heroEmoji: {
     fontSize: 110,
@@ -247,66 +259,28 @@ const styles = StyleSheet.create({
     color: Colors.text,
     lineHeight: 28,
   },
-  ratingRow: {
+  stockRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     marginVertical: 2,
   },
-  stars: {
-    flexDirection: 'row',
-    gap: 1,
+  stockDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.success,
   },
-  ratingValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  ratingCount: {
+  stockText: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: Colors.success,
+    fontWeight: '500',
   },
   price: {
     fontSize: 28,
     fontWeight: '800',
     color: Colors.text,
     marginTop: 4,
-  },
-  sizeSection: {
-    marginTop: 10,
-  },
-  sizeLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 10,
-  },
-  sizes: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sizeBtn: {
-    width: 46,
-    height: 42,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.surface,
-  },
-  sizeBtnActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  sizeBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  sizeBtnTextActive: {
-    color: '#fff',
   },
   descSection: {
     marginTop: 10,
@@ -374,6 +348,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#fff',
+  },
+  addBtnDisabled: {
+    backgroundColor: Colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   notFound: {
     flex: 1,

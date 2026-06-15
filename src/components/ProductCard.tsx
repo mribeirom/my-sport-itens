@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import Colors from '../constants/colors';
 import { Product } from '../types';
@@ -14,17 +14,25 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
 
   const handleAdd = () => {
-    addItem(product, product.sizes[0]);
+    addItem(product);
   };
 
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => router.push(`/produto/${product.id}`)}
+      onPress={() => router.push(`/produto/${product.sku}`)}
       activeOpacity={0.85}
     >
       <View style={styles.imageContainer}>
-        <Text style={styles.emoji}>{product.emoji}</Text>
+        {product.imageUrl ? (
+          <Image
+            source={{ uri: product.imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={styles.emoji}>📦</Text>
+        )}
       </View>
 
       <View style={styles.info}>
@@ -32,16 +40,22 @@ export function ProductCard({ product }: ProductCardProps) {
           {product.name}
         </Text>
         <Text style={styles.brand}>
-          {product.category} · {product.brand}
+          {product.categorySlug}
         </Text>
 
         <View style={styles.footer}>
           <Text style={styles.price}>
-            R$ {product.price.toLocaleString('pt-BR')}
+            R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </Text>
-          <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
-            <Text style={styles.addButtonText}>+</Text>
-          </TouchableOpacity>
+          {product.stock === 0 ? (
+            <View style={[styles.addButton, styles.addButtonDisabled]}>
+              <Text style={styles.outOfStockText}>Esgotado</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
+              <Text style={styles.addButtonText}>+</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -68,6 +82,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
   },
   emoji: {
     fontSize: 48,
@@ -85,6 +105,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textSecondary,
     marginBottom: 6,
+    textTransform: 'capitalize',
   },
   footer: {
     flexDirection: 'row',
@@ -104,10 +125,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  addButtonDisabled: {
+    backgroundColor: Colors.border,
+  },
   addButtonText: {
     color: Colors.textInverse,
     fontSize: 18,
     fontWeight: '700',
     lineHeight: 22,
+  },
+  outOfStockText: {
+    color: Colors.textSecondary,
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
 });

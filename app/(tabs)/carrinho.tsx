@@ -58,7 +58,7 @@ export default function CarrinhoScreen() {
         </Text>
 
         {items.map((item) => (
-          <CartItemCard key={`${item.product.id}-${item.selectedSize}`} item={item} />
+          <CartItemCard key={item.product.sku} item={item} />
         ))}
 
         {/* Summary */}
@@ -238,4 +238,3 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 });
-

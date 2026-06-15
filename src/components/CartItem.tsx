@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import Colors from '../constants/colors';
 import { CartItem as CartItemType } from '../types';
 import { useCart } from '../context/CartContext';
@@ -14,7 +14,15 @@ export function CartItemCard({ item }: CartItemProps) {
   return (
     <View style={styles.card}>
       <View style={styles.imageContainer}>
-        <Text style={styles.emoji}>{item.product.emoji}</Text>
+        {item.product.imageUrl ? (
+          <Image
+            source={{ uri: item.product.imageUrl }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={styles.emoji}>📦</Text>
+        )}
       </View>
 
       <View style={styles.info}>
@@ -22,7 +30,7 @@ export function CartItemCard({ item }: CartItemProps) {
           {item.product.name}
         </Text>
         <Text style={styles.variant}>
-          Tamanho {item.selectedSize} · {item.product.brand}
+          {item.product.categorySlug}
         </Text>
         <Text style={styles.price}>
           R$ {(item.product.price * item.quantity).toLocaleString('pt-BR', {
@@ -34,14 +42,14 @@ export function CartItemCard({ item }: CartItemProps) {
       <View style={styles.controls}>
         <TouchableOpacity
           style={styles.controlBtn}
-          onPress={() => updateQuantity(item.product.id, item.selectedSize, item.quantity - 1)}
+          onPress={() => updateQuantity(item.product.sku, item.quantity - 1)}
         >
           <Text style={styles.controlBtnText}>−</Text>
         </TouchableOpacity>
         <Text style={styles.quantity}>{item.quantity}</Text>
         <TouchableOpacity
           style={[styles.controlBtn, styles.controlBtnPrimary]}
-          onPress={() => updateQuantity(item.product.id, item.selectedSize, item.quantity + 1)}
+          onPress={() => updateQuantity(item.product.sku, item.quantity + 1)}
         >
           <Text style={[styles.controlBtnText, styles.controlBtnTextPrimary]}>+</Text>
         </TouchableOpacity>
@@ -72,6 +80,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    overflow: 'hidden',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
   },
   emoji: {
     fontSize: 32,
@@ -88,6 +102,7 @@ const styles = StyleSheet.create({
   variant: {
     fontSize: 11,
     color: Colors.textSecondary,
+    textTransform: 'capitalize',
   },
   price: {
     fontSize: 14,

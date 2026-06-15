@@ -9,19 +9,50 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/src/constants/colors';
+import { useAuth } from '@/src/context/AuthContext';
 
 export default function CadastroScreen() {
   const router = useRouter();
+  const { register } = useAuth();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmSenha, setConfirmSenha] = useState('');
   const [showSenha, setShowSenha] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!nome.trim() || !email.trim() || !senha.trim()) {
+      Alert.alert('Atenção', 'Preencha todos os campos.');
+      return;
+    }
+    if (senha !== confirmSenha) {
+      Alert.alert('Atenção', 'As senhas não coincidem.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await register(nome.trim(), email.trim(), senha);
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      let msg = 'Não foi possível criar sua conta. Tente novamente.';
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed.detail) msg = parsed.detail;
+      } catch {}
+      Alert.alert('Erro no Cadastro', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -74,6 +105,7 @@ export default function CadastroScreen() {
                   value={nome}
                   onChangeText={setNome}
                   autoCapitalize="words"
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -96,6 +128,7 @@ export default function CadastroScreen() {
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -117,6 +150,7 @@ export default function CadastroScreen() {
                   value={senha}
                   onChangeText={setSenha}
                   secureTextEntry={!showSenha}
+                  editable={!loading}
                 />
                 <TouchableOpacity onPress={() => setShowSenha(!showSenha)} style={styles.eyeBtn}>
                   <Ionicons
@@ -145,6 +179,7 @@ export default function CadastroScreen() {
                   value={confirmSenha}
                   onChangeText={setConfirmSenha}
                   secureTextEntry={!showConfirm}
+                  editable={!loading}
                 />
                 <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)} style={styles.eyeBtn}>
                   <Ionicons
@@ -167,12 +202,19 @@ export default function CadastroScreen() {
 
             {/* Botão Cadastrar */}
             <TouchableOpacity
-              style={styles.btnPrimary}
-              onPress={() => router.replace('/(tabs)')}
+              style={[styles.btnPrimary, loading && styles.btnDisabled]}
+              onPress={handleRegister}
               activeOpacity={0.85}
+              disabled={loading}
             >
-              <Text style={styles.btnPrimaryText}>Criar conta</Text>
-              <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.btnPrimaryText}>Criar conta</Text>
+                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                </>
+              )}
             </TouchableOpacity>
 
             {/* Divider */}
@@ -341,6 +383,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 6,
+  },
+  btnDisabled: {
+    opacity: 0.7,
   },
   btnPrimaryText: {
     fontSize: 16,
