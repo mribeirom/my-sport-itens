@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import Colors from '../constants/colors';
 import { Order } from '../types';
 
@@ -30,11 +31,16 @@ function formatDate(dateStr?: string): string {
 }
 
 export function OrderCard({ order }: OrderCardProps) {
+  const router = useRouter();
   const statusKey = (order.status || 'paid').toLowerCase();
   const status = STATUS_MAP[statusKey] || STATUS_MAP.paid;
 
+  const handlePress = () => {
+    router.push(`/pedido/${encodeURIComponent(order.code)}`);
+  };
+
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={handlePress} activeOpacity={0.75}>
       <View style={styles.header}>
         <View>
           <Text style={styles.orderId}>Pedido #{order.code}</Text>
@@ -56,7 +62,7 @@ export function OrderCard({ order }: OrderCardProps) {
               <Image
                 source={{ uri: item.imageUrl }}
                 style={styles.itemImage}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             ) : (
               <Text style={styles.itemEmojiText}>📦</Text>
@@ -77,13 +83,11 @@ export function OrderCard({ order }: OrderCardProps) {
             R$ {order.totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </Text>
         </View>
-        <TouchableOpacity style={styles.actionBtn}>
-          <Text style={styles.actionBtnText}>
-            {statusKey === 'delivered' ? 'Ver detalhes' : 'Rastrear'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.actionBtn}>
+          <Text style={styles.actionBtnText}>Ver detalhes</Text>
+        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -132,7 +136,7 @@ const styles = StyleSheet.create({
   itemThumb: {
     width: 42,
     height: 42,
-    backgroundColor: Colors.background,
+    backgroundColor: 'transparent',
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',

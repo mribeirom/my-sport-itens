@@ -102,7 +102,7 @@ export default function ProdutoDetalheScreen() {
             <Image
               source={{ uri: product.imageUrl }}
               style={styles.heroImage}
-              resizeMode="cover"
+              resizeMode="contain"
             />
           ) : (
             <Text style={styles.heroEmoji}>📦</Text>

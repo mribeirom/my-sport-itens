@@ -5,7 +5,6 @@ export const Colors = {
 
   background: '#F8F9FA',
   surface: '#FFFFFF',
-  surfaceElevated: '#FFFFFF',
 
   text: '#1A1A2E',
   textSecondary: '#6B7280',
@@ -26,8 +25,6 @@ export const Colors = {
 
   danger: '#EF4444',
   dangerLight: '#FEE2E2',
-
-  star: '#FBBF24',
 
   tabBar: '#FFFFFF',
   tabBarBorder: '#E5E7EB',

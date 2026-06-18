@@ -63,12 +63,5 @@ export interface User {
 
 // ─── Checkout helpers ────────────────────────────────────────────────────────
 
-export interface DeliveryAddress {
-  label: string;
-  recipient: string;
-  street: string;
-  city: string;
-}
-
 export type DeliveryMethod = 'express' | 'standard';
 export type PaymentMethod = 'credit' | 'pix' | 'boleto';

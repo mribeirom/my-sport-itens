@@ -411,19 +411,6 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: Colors.primary,
   },
-  addAddressBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-    marginTop: 2,
-    paddingVertical: 4,
-  },
-  addAddressText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.primary,
-  },
   spacer: {
     height: 8,
   },

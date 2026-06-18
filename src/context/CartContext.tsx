@@ -18,20 +18,8 @@ const CartContext = createContext<CartContextData>({} as CartContextData);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-
-  // Expose a way to set products for resolving cart items from API
-  // We'll load products in the home screen and store them here
-  const [productsMap, setProductsMap] = useState<Map<string, Product>>(new Map());
-
-  // Sync products map when allProducts changes
-  useEffect(() => {
-    const map = new Map<string, Product>();
-    allProducts.forEach((p) => map.set(p.sku, p));
-    setProductsMap(map);
-  }, [allProducts]);
 
   // Load cart from API when user is available
   useEffect(() => {
@@ -42,14 +30,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
         const apiCart = await fetchCart(user!.code!);
         if (apiCart && apiCart.items && apiCart.items.length > 0) {
-          // We need product details to rebuild CartItems
-          // For now store the raw items, they'll be resolved when products are loaded
           const { fetchProducts } = await import('../services/api');
           const products = await fetchProducts();
           const pMap = new Map<string, Product>();
           products.forEach((p: Product) => pMap.set(p.sku, p));
-          setProductsMap(pMap);
-          setAllProducts(products);
 
           const resolved: CartItem[] = [];
           for (const apiItem of apiCart.items) {

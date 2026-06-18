@@ -28,7 +28,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <Image
             source={{ uri: product.imageUrl }}
             style={styles.image}
-            resizeMode="cover"
+            resizeMode="contain"
           />
         ) : (
           <Text style={styles.emoji}>📦</Text>
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     height: 90,
-    backgroundColor: Colors.background,
+    backgroundColor: 'transparent',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
